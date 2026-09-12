@@ -1,13 +1,15 @@
-const http = require( 'http' ),
-      fs   = require( 'fs' ),
-      // IMPORTANT: you must run `npm install` in the directory for this assignment
-      // to install the mime library if you're testing this on your local machine.
-      // On Render, make sure `npm install` is your build command.
-      mime = require( 'mime' ),
+require('dotenv').config()
+
+const express = require( 'express' ),
+      { MongoClient } = require( 'mongodb' ),
       dir  = 'public/',
       port = 3000
 
-const recipes = []
+const uri = process.env.MONGODB_URI
+const client = new MongoClient( uri )
+
+// gets set to the MongoDB collection once we've connected, in start() at the bottom
+let recipes
 
 /* ignoring this */
 const appdata = [
@@ -16,43 +18,24 @@ const appdata = [
   { 'model': 'ford', 'year': 1987, 'mpg': 14} 
 ]
 
+const app = express()
 
-// I don't love this way of handling routes but it works for my purposes I guess
-const server = http.createServer( function( request,response ) {
-  if( request.method === 'GET' && request.url === '/recipes' ) {
-    sendRecipes( response )
-  }else if( request.method === 'GET') {
-    handleGet( request, response )    
-  }else if( request.method === 'POST' && request.url == '/submit' ) {
-    handlePost( request, response ) 
-  }else if (request.method === 'POST' && request.url == '/delete') {
-    handleDelete( request, response )
-  }else if (request.method === 'POST' && request.url == '/update') {
-    handleUpdate( request, response )
-  }else {
-    response.writeHead(404, { 'Content-Type': 'text/plain' })
-    response.end('404 Error: Not Found')
-  }
-})
+// yay my old routes are dead
+app.use( express.static( dir ) )
 
-const handleGet = function( request, response ) {
-  const filename = dir + request.url.slice( 1 ) 
+app.get( '/recipes', sendRecipes )
+app.post( '/submit', handlePost )
+app.post( '/delete', handleDelete )
+app.post( '/update', handleUpdate )
 
-  if( request.url === '/' ) {
-    sendFile( response, 'public/index.html' )
-  }else{
-    sendFile( response, filename )
-  }
-}
-
-const handlePost = function( request, response ) {
+async function handlePost( request, response ) {
   let dataString = ''
 
   request.on( 'data', function( data ) {
     dataString += data
   })
 
-  request.on( 'end', function() {
+  request.on( 'end', async function() {
 
     let recipe
 
@@ -87,45 +70,24 @@ const handlePost = function( request, response ) {
     recipe.domain = url.hostname.replace(/^www\./, '')
     recipe.id = Date.now() // This is a little scuffed but it should work
 
-    recipes.push( recipe )
+    await recipes.insertOne( recipe )
+    const allRecipes = await recipes.find({}).toArray()
 
     response.writeHead( 200, "OK", {'Content-Type': 'application/json' })
 
     // change this to incorporate data - ok
-    response.end(JSON.stringify(recipes))
+    response.end(JSON.stringify(allRecipes))
   })
 }
 
-const sendFile = function( response, filename ) {
-   const type = mime.getType( filename ) 
-
-   fs.readFile( filename, function( err, content ) {
-
-     // if the error = null, then we've loaded the file successfully
-     if( err === null ) {
-
-       // status code: https://httpstatuses.com
-       response.writeHeader( 200, { 'Content-Type': type })
-       response.end( content )
-
-     }else{
-
-       // file not found, error code 404
-       response.writeHeader( 404 )
-       response.end( '404 Error: File Not Found' )
-
-     }
-   })
-}
-
-const handleDelete = function( request, response ) {
+async function handleDelete( request, response ) {
   let dataString = ''
 
   request.on( 'data', function( data ) {
     dataString += data
   })
 
-  request.on( 'end', function() {
+  request.on( 'end', async function() {
 
     let payload
 
@@ -139,29 +101,24 @@ const handleDelete = function( request, response ) {
 
     const id = payload.id
 
-    const index = recipes.findIndex(function (recipe) {
-      return recipe.id === id
-    })
+    await recipes.deleteOne( { id: id } )
 
-    if (index >= 0) {
-      recipes.splice(index, 1)
-    }
+    const allRecipes = await recipes.find({}).toArray()
 
     response.writeHead(200, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify(recipes))
+    response.end(JSON.stringify(allRecipes))
   })
 }
 
-const handleUpdate = function( request, response ) {
+async function handleUpdate( request, response ) {
   let dataString = ''
 
   request.on( 'data', function( data ) {
     dataString += data
   })
 
-  request.on( 'end', function() {
-    
-    
+  request.on( 'end', async function() {
+
     let incoming
 
     try {
@@ -171,25 +128,37 @@ const handleUpdate = function( request, response ) {
       response.end(JSON.stringify({ error: 'Invalid JSON' }))
       return
     }
-    
-    const index = recipes.findIndex(function (recipe) {
-      return recipe.id === incoming.id
-    })
 
-    if (index >= 0) {
-      recipes[index] = incoming
-    } else {
-      recipes.push(incoming)
-    }
+    await recipes.updateOne( { id: incoming.id }, { $set: incoming }, { upsert: true } )
+
+    const allRecipes = await recipes.find({}).toArray()
 
     response.writeHead(200, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify(recipes))
+    response.end(JSON.stringify(allRecipes))
   })
 }
 
-const sendRecipes = function( response ) {
+async function sendRecipes( request, response ) {
+  const allRecipes = await recipes.find({}).toArray()
+
   response.writeHead( 200, "OK", {'Content-Type': 'application/json' })
-  response.end(JSON.stringify(recipes))
+  response.end(JSON.stringify(allRecipes))
 }
 
-server.listen( process.env.PORT || port )
+// catches anything that didn't match a route above or a static file
+app.use( function( request, response ) {
+  response.writeHead(404, { 'Content-Type': 'text/plain' })
+  response.end('404 Error: Not Found')
+})
+
+async function start() {
+  await client.connect()
+  recipes = client.db().collection( 'recipes' )
+
+  // debug message
+  console.log('Connected, listening on port ' + port)
+
+  app.listen( process.env.PORT || port )
+}
+
+start()
