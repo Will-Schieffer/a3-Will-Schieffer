@@ -1,6 +1,9 @@
 require('dotenv').config()
 
 const express = require( 'express' ),
+      session = require( 'express-session' ),
+      passport = require( 'passport' ),
+      GitHubStrategy = require( 'passport-github2' ).Strategy,
       { MongoClient } = require( 'mongodb' ),
       dir  = 'public/',
       port = 3000
@@ -8,25 +11,99 @@ const express = require( 'express' ),
 const uri = process.env.MONGODB_URI
 const client = new MongoClient( uri )
 
-// gets set to the MongoDB collection once we've connected, in start() at the bottom
+// gets set to the MongoDB collection(s) once we've connected, in start() at the bottom
 let recipes
-
-/* ignoring this */
-const appdata = [
-  { 'model': 'toyota', 'year': 1999, 'mpg': 23 },
-  { 'model': 'honda', 'year': 2004, 'mpg': 30 },
-  { 'model': 'ford', 'year': 1987, 'mpg': 14} 
-]
+let users
 
 const app = express()
 
-// yay my old routes are dead
-app.use( express.static( dir ) )
+app.use( session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false
+}))
 
-app.get( '/recipes', sendRecipes )
-app.post( '/submit', handlePost )
-app.post( '/delete', handleDelete )
-app.post( '/update', handleUpdate )
+app.use( passport.initialize() )
+app.use( passport.session() )
+
+passport.use( new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: 'http://localhost:3000/auth/github/callback'
+}, async function( accessToken, refreshToken, profile, done ) {
+  try {
+    const existing = await users.findOne( { githubId: profile.id } )
+
+    if ( existing ) {
+      return done( null, existing )
+    }
+
+    // first time we've seen this GitHub account -- create an account for them
+    const newUser = {
+      githubId: profile.id,
+      username: profile.username
+    }
+
+    await users.insertOne( newUser )
+    return done( null, newUser )
+
+  } catch (err) {
+    return done( err )
+  }
+}))
+
+passport.serializeUser( function( user, done ) {
+  done( null, user.githubId )
+})
+
+passport.deserializeUser( async function( githubId, done ) {
+  try {
+    const user = await users.findOne( { githubId: githubId } )
+    done( null, user )
+  } catch (err) {
+    done( err )
+  }
+})
+
+function ensureAuthenticated( request, response, next ) {
+  if ( request.isAuthenticated() ) {
+    return next()
+  }
+  response.redirect( '/login.html' )
+}
+
+// yay my old routes are dead
+app.use( express.static( dir, { index: false } ) )
+
+app.get( '/', ensureAuthenticated, function( request, response ) {
+  response.sendFile( __dirname + '/' + dir + 'index.html' )
+})
+
+app.get( '/auth/github', passport.authenticate( 'github' ) )
+
+app.get( '/auth/github/callback',
+  passport.authenticate( 'github', { failureRedirect: '/login.html' } ),
+  function( request, response ) {
+    response.redirect( '/' )
+  }
+)
+
+app.get( '/logout', function( request, response, next ) {
+  request.logout( function( err ) {
+    if ( err ) { return next( err ) }
+    response.redirect( '/login.html' )
+  })
+})
+
+// lets the front end ask who's logged in
+app.get( '/me', ensureAuthenticated, function( request, response ) {
+  response.json( { username: request.user.username } )
+})
+
+app.get( '/recipes', ensureAuthenticated, sendRecipes )
+app.post( '/submit', ensureAuthenticated, handlePost )
+app.post( '/delete', ensureAuthenticated, handleDelete )
+app.post( '/update', ensureAuthenticated, handleUpdate )
 
 async function handlePost( request, response ) {
   let dataString = ''
@@ -69,9 +146,10 @@ async function handlePost( request, response ) {
 
     recipe.domain = url.hostname.replace(/^www\./, '')
     recipe.id = Date.now() // This is a little scuffed but it should work
+    recipe.githubId = request.user.githubId
 
     await recipes.insertOne( recipe )
-    const allRecipes = await recipes.find({}).toArray()
+    const allRecipes = await recipes.find( { githubId: request.user.githubId } ).toArray()
 
     response.writeHead( 200, "OK", {'Content-Type': 'application/json' })
 
@@ -103,7 +181,7 @@ async function handleDelete( request, response ) {
 
     await recipes.deleteOne( { id: id } )
 
-    const allRecipes = await recipes.find({}).toArray()
+    const allRecipes = await recipes.find( { githubId: request.user.githubId } ).toArray()
 
     response.writeHead(200, { 'Content-Type': 'application/json' })
     response.end(JSON.stringify(allRecipes))
@@ -131,7 +209,7 @@ async function handleUpdate( request, response ) {
 
     await recipes.updateOne( { id: incoming.id }, { $set: incoming }, { upsert: true } )
 
-    const allRecipes = await recipes.find({}).toArray()
+    const allRecipes = await recipes.find( { githubId: request.user.githubId } ).toArray()
 
     response.writeHead(200, { 'Content-Type': 'application/json' })
     response.end(JSON.stringify(allRecipes))
@@ -139,7 +217,7 @@ async function handleUpdate( request, response ) {
 }
 
 async function sendRecipes( request, response ) {
-  const allRecipes = await recipes.find({}).toArray()
+  const allRecipes = await recipes.find( { githubId: request.user.githubId } ).toArray()
 
   response.writeHead( 200, "OK", {'Content-Type': 'application/json' })
   response.end(JSON.stringify(allRecipes))
@@ -153,7 +231,10 @@ app.use( function( request, response ) {
 
 async function start() {
   await client.connect()
-  recipes = client.db().collection( 'recipes' )
+
+  const db = client.db()
+  recipes = db.collection( 'recipes' )
+  users = db.collection( 'users' )
 
   // debug message
   console.log('Connected, listening on port ' + port)

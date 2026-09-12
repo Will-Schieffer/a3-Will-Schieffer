@@ -1,129 +1,196 @@
-* {
-  box-sizing: border-box;
+:root {
+  --color-bg: #f7f8f9;
+  --color-surface: #ffffff;
+  --color-border: #e4e7eb;
+  --color-text: #1c1e21;
+  --color-text-muted: #5b6470;
+  --color-accent: #1f7a6c;
+  --color-accent-dark: #16594f;
 }
 
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* ---------- App shell / top bar ---------- */
+
 body.app-shell {
-  margin: 0;
   min-height: 100vh;
+}
+
+.topbar {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-inner {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, #f6f1ff 0%, #dffaf7 100%);
-  color: #2f2d3a;
-  font-family: "Comic Sans MS", "Comic Sans", cursive; /* It IS web safe... :) */
-  padding: 32px 20px;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.username {
+  color: var(--color-text-muted);
+}
+
+.logout-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.logout-link:hover {
+  color: var(--color-accent-dark);
+}
+
+/* ---------- Main app content ---------- */
+
+.app-main {
+  max-width: 760px;
+  padding: 48px 20px 80px;
 }
 
 .page-title {
-  margin: 0 0 20px;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
-  color: #2a7a74;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: 28px;
 }
 
 .recipe-form {
-  width: min(900px, 100%);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(74, 167, 160, 0.25);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(47, 45, 58, 0.06);
+  margin-bottom: 48px;
 }
 
-#title,
-#url,
-#category,
-#submit {
-  font: inherit;
+.form-label {
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
-#title,
-#url,
-#category {
-  flex: 1 1 180px;
-  min-height: 42px;
-  padding: 10px 12px;
-  border: 1px solid rgba(74, 167, 160, 0.25);
-  border-radius: 10px;
-  background: white;
-  color: #2f2d3a;
+.btn-primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  font-weight: 600;
 }
 
-#submit {
-  border: none;
-  border-radius: 10px;
-  background: #4aa7a0;
-  color: white;
-  padding: 10px 18px;
-  font-weight: 700;
-  cursor: pointer;
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--color-accent-dark);
+  border-color: var(--color-accent-dark);
 }
 
-#submit:hover {
-  background: #2a7a74;
-}
+/* ---------- Recipe list ---------- */
 
 .recipe-list {
-  width: min(900px, 100%);
-  list-style: none;
-  margin: 24px 0 0;
+  margin: 0;
   padding: 0;
+}
+
+.recipe-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recipe-row:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.recipe-main {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-/* Each recipe row */
-.recipe-list li {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  align-items: center;
-  gap: 12px;
-
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(74, 167, 160, 0.25);
-  border-radius: 12px;
-  padding: 12px 0;
-}
-
-.recipe-list a,
-.recipe-list span,
-.recipe-list small,
-.recipe-list button {
+  gap: 4px;
   min-width: 0;
-  text-align: center;
-  justify-self: center;
 }
 
-.recipe-list a {
-  color: #2a7a74;
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.recipe-list span,
-.recipe-list small {
-  color: #586373;
-}
-
-.recipe-list button {
-  border: none;
-  border-radius: 8px;
-  padding: 6px 10px;
+.recipe-title {
   font-weight: 600;
-  cursor: pointer;
-  width: auto;
-  min-width: 70px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.recipe-title:hover {
+  color: var(--color-accent);
+}
+
+.recipe-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recipe-meta span:not(:last-child)::after {
+  content: "\00b7";
+  margin-left: 10px;
+  color: var(--color-border);
+}
+
+.recipe-notes {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.recipe-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------- Login page ---------- */
+
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 40px;
+  max-width: 380px;
+  width: 100%;
   text-align: center;
 }
 
-button[style*='color: red'] {
-  background: rgba(255, 141, 141, 0.15);
+.login-card .brand {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
 }
 
-button[style*='color: blue'] {
-  background: rgba(110, 157, 255, 0.15);
+.login-copy {
+  color: var(--color-text-muted);
+  margin: 8px 0 24px;
+}
+
+.btn-github {
+  width: 100%;
 }
