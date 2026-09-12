@@ -147,12 +147,25 @@ const deleteRecipe = async function( id ) {
 
 const loadRecipes = async function() {
   const response = await fetch( '/recipes' )
+
+  // Bounce back to login if auth fails
+  if (response.status === 401) {
+    window.location.href = '/login.html'
+    return
+  }
+
   const recipes = await response.json()
   renderRecipes( recipes )
 }
 
 const loadUser = async function() {
   const response = await fetch( '/me' )
+
+  // Back to login if auth fails again
+  if (response.status === 401) {
+    window.location.href = '/login.html'
+    return
+  }
 
   if (response.ok) {
     const user = await response.json()

@@ -79,6 +79,15 @@ function ensureAuthenticated( request, response, next ) {
   response.redirect( '/login.html' )
 }
 
+// Helps to resolve a browser error caused by middleware and fetch requests
+// Should improve best pratice score on lighthouse!
+function ensureAuthenticatedAPI( request, response, next ) {
+  if ( request.isAuthenticated() ) {
+    return next()
+  }
+  response.status( 401 ).json( { error: 'Not logged in' } )
+}
+
 // yay my old routes are dead
 app.use( express.static( dir, { index: false } ) )
 
@@ -103,14 +112,14 @@ app.get( '/logout', function( request, response, next ) {
 })
 
 // lets the front end ask who's logged in
-app.get( '/me', ensureAuthenticated, function( request, response ) {
+app.get( '/me', ensureAuthenticatedAPI, function( request, response ) {
   response.json( { username: request.user.username } )
 })
 
-app.get( '/recipes', ensureAuthenticated, sendRecipes )
-app.post( '/submit', ensureAuthenticated, handlePost )
-app.post( '/delete', ensureAuthenticated, handleDelete )
-app.post( '/update', ensureAuthenticated, handleUpdate )
+app.get( '/recipes', ensureAuthenticatedAPI, sendRecipes )
+app.post( '/submit', ensureAuthenticatedAPI, handlePost )
+app.post( '/delete', ensureAuthenticatedAPI, handleDelete )
+app.post( '/update', ensureAuthenticatedAPI, handleUpdate )
 
 async function handlePost( request, response ) {
   let dataString = ''
