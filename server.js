@@ -5,6 +5,9 @@ const express = require( 'express' ),
       passport = require( 'passport' ),
       GitHubStrategy = require( 'passport-github2' ).Strategy,
       { MongoClient } = require( 'mongodb' ),
+      helmet = require( 'helmet' ),
+      morgan = require( 'morgan' ),
+      compression = require( 'compression' ),
       dir  = 'public/',
       port = 3000
 
@@ -16,6 +19,10 @@ let recipes
 let users
 
 const app = express()
+
+app.use( helmet() )
+app.use( morgan( 'dev' ) )
+app.use( compression() )
 
 app.use( session({
   secret: process.env.SESSION_SECRET,
