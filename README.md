@@ -16,7 +16,7 @@ I actually had the largest challenge in getting a perfect lighthouse score, so m
   - **express-session**: Manages logged-in user sessions by storing session data server-side and identifying returning requests via a cookie.
   - **passport**: Handles the authentication logic itself, plugging into Express as middleware to manage login state and integrate with the GitHub OAuth strategy.
   - **helmet**: Sets a batch of security-related HTTP response headers (like blocking the site from being framed by other domains) to guard against common web vulnerabilities.
-  - **morgan**: Logs every incoming HTTP request to the console (method, path, status, response time). Hopefully this one counts since it's not functionally the user sees, but as a developer it was super nice to have.
+  - **morgan**: Logs every incoming HTTP request to the console (method, path, status, response time). Hopefully this one counts since it's not functionally something the user sees, or experiences but as a developer it was super nice to have.
   - **compression**: gzips HTTP responses before sending them, reducing payload size and speeding up page loads.
 
 ### Design/Evaluation Achievements
