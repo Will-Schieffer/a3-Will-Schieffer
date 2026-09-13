@@ -194,3 +194,27 @@ body.app-shell {
 .btn-github {
   width: 100%;
 }
+
+/* Upping the contrast on this for accessibility score */
+
+.recipe-actions .btn-outline-secondary {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+.recipe-actions .btn-outline-secondary:hover,
+.recipe-actions .btn-outline-secondary:focus {
+  background: var(--color-text);
+  color: #fff;
+}
+
+.recipe-actions .btn-outline-danger {
+  color: #b3261e;
+  border-color: #b3261e;
+}
+
+.recipe-actions .btn-outline-danger:hover,
+.recipe-actions .btn-outline-danger:focus {
+  background: #b3261e;
+  color: #fff;
+}
